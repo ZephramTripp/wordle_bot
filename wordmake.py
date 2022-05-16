@@ -24,8 +24,6 @@ def word_make(char_list, length):
     return outlist
 
 
-# b = word_make(list(alphabet), 5)
-
 myCounter = Counter([j for i in wordlist for j in i])
 
 print(myCounter.most_common(10))
@@ -34,21 +32,14 @@ print(myCounter.most_common(10))
 def wordsuggest(counter, wordlist, depth):
     length = 5
     letters = counter.most_common(depth)
-    # newlist = word_make([i[0] for i in letters], length)
     newlist = [
         j for j in wordlist if sum([k in [i[0] for i in letters] for k in j]) == length
     ]
-    outlist = []
-    for word in newlist:
-        if word in wordlist:
-            outlist.append(word)
-    if outlist:
-        # print(outlist)
-        bestword = outlist[0]
+    if newlist:
+        bestword = newlist[0]
         bestcount = 0
-        for i in outlist:
+        for i in newlist:
             count = sum([counter[letter] for letter in set(i)])
-            # print(i, count)
             if count > bestcount:
                 bestword = i
                 bestcount = count
@@ -80,18 +71,20 @@ while sum([len(i) for i in greens.values()]) != 5:
         while not status:
             print(f"Was {i} g, y, or b?")
             status = str(input())
-        if status == "g":
-            if i in greens.keys():
-                greens[i].add(index)
+            if status == "g":
+                if i in greens.keys():
+                    greens[i].add(index)
+                else:
+                    greens[i] = set([index])
+            elif status == "y":
+                if i in yellows.keys():
+                    yellows[i].add(index)
+                else:
+                    yellows[i] = set([index])
+            elif status == "b":
+                blacks.add(i)
             else:
-                greens[i] = set([index])
-        elif status == "y":
-            if i in yellows.keys():
-                yellows[i].add(index)
-            else:
-                yellows[i] = set([index])
-        elif status == "b":
-            blacks.add(i)
+                status = ""
         index += 1
 
     updatedlist = []
