@@ -5,11 +5,13 @@ wordlist = ["table", "saber", "talon", "eager", "stuck"]
 
 with open("/usr/share/dict/words") as dictionary:
     templist = dictionary.readlines()
-    wordlist = [
-        i.strip()
-        for i in templist
-        if len(i.strip()) == 5 and i.strip().isalpha() and i.isascii()
-    ]
+    wordlist = set(
+        [
+            i.strip().lower()
+            for i in templist
+            if len(i.strip()) == 5 and i.strip().isalpha() and i.isascii()
+        ]
+    )
 
 
 def word_make(char_list, length):
@@ -32,7 +34,10 @@ print(myCounter.most_common(10))
 def wordsuggest(counter, wordlist, depth):
     length = 5
     letters = counter.most_common(depth)
-    newlist = word_make([i[0] for i in letters], length)
+    # newlist = word_make([i[0] for i in letters], length)
+    newlist = [
+        j for j in wordlist if sum([k in [i[0] for i in letters] for k in j]) == length
+    ]
     outlist = []
     for word in newlist:
         if word in wordlist:
@@ -47,7 +52,7 @@ def wordsuggest(counter, wordlist, depth):
             if count > bestcount:
                 bestword = i
                 bestcount = count
-        if len(set(i)) < len(list(i)) and len(wordlist) > 1 and depth < 20:
+        if len(set(i)) < len(list(i)) and len(wordlist) > 1 and depth < len(counter):
             trialword = wordsuggest(counter, wordlist, depth + 1)
             newcount = sum([counter[letter] for letter in set(trialword)])
             if newcount > count:
