@@ -61,27 +61,30 @@ def find_all(string, substring):
         start += 1
 
 
-def test_wordguess(finalword, debug=True):
+def test_wordguess(finalword, startingword=None, debug=True, wordlist=None):
     """
     Test wordmake's wordguess method
     """
-    with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
-        wordlist = list(
-            dict.fromkeys(
-                [
-                    i.strip().lower()
-                    for i in dictionary.readlines()
-                    if len(i.strip()) == 5
-                    and i.strip().isalpha()
-                    and i.isascii()
-                    and i.islower()
-                ]
+    if not wordlist:
+        with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
+            wordlist = list(
+                dict.fromkeys(
+                    [
+                        i.strip().lower()
+                        for i in dictionary.readlines()
+                        if len(i.strip()) == 5
+                        and i.strip().isalpha()
+                        and i.isascii()
+                        and i.islower()
+                    ]
+                )
             )
-        )
 
     my_counter = Counter([j for i in wordlist for j in i])
-    guess_word = wordmake.wordsuggest(my_counter, wordlist, 5)
-    # guess_word = "crate"
+    if startingword is None:
+        guess_word = wordmake.wordsuggest(my_counter, wordlist, 5)
+    else:
+        guess_word = startingword
     prev_guesses = []
     guess_count = 0
     yellows = {}
@@ -113,35 +116,15 @@ def test_wordguess(finalword, debug=True):
                 and prev_guesses[-2] is guess_word
             ):
                 raise ValueError
-            print(guess_word)
+            # print(guess_word)
             guess_count += 1
 
-    print(f"{guess_word} was correct! Guessed in {guess_count} guesses")
+    # print(f"{guess_word} was correct! Guessed in {guessCount} guesses")
     return guess_count
 
 
-def main():
-    """
-    Runs an array of test cases
-    """
-    test_case = test_guess("allay", "llama")
-    assert test_case == ["y", "g", "y", "y", "b"]
-    test_wordguess("arose")
-    test_wordguess("delve")
-    test_wordguess("canny")
-    test_wordguess("tepid")
-    test_wordguess("zests")
-    test_wordguess("being")
-    test_wordguess("fully")
-    test_wordguess("purer")
-    test_wordguess("fishy")
-    test_wordguess("crook")
-    test_wordguess("masts")
-    test_wordguess("pumps")
-    test_wordguess("undue")
-    test_wordguess("drool")
-    test_wordguess("palls")
-    with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
+def find_best_starting_word():
+    with open("/usr/share/dict/words") as dictionary:
         templist = dictionary.readlines()
         wordlist = list(
             dict.fromkeys(
@@ -156,14 +139,75 @@ def main():
             )
         )
     outlist = []
-    index = 1
-    for i in wordlist:
-        print(f"Guessing on {i}")
-        outlist.append(test_wordguess(i, False))
-        print(f"----------{index/len(wordlist):.2%} done----------")
-        index += 1
+    bestword_failure = ""
+    bestword_score = ""
+    bestfail = 500
+    bestscore = 6
+    for index, word in enumerate(wordlist):
+        for subindex, i in enumerate(wordlist):
+            # print(f"Guessing on {i}")
+            outlist.append(test_wordguess(i, word, False, wordlist))
+            # print(f"----------{subindex/len(wordlist):.2%} done----------")
+        # print(f"Average guess score {sum(outlist)/len(outlist)}")
+        avgscore = sum(outlist) / len(outlist)
+        failcount = len([i for i in outlist if i > 6])
+        if avgscore < bestscore:
+            bestscore = avgscore
+            bestword_score = word
+        # print(f"Fails on {len([i for i in outlist if i>6])} words")
+        if failcount < bestfail:
+            bestfail = failcount
+            bestword_failure = word
+        # print(f"***{index/len(wordlist):.2%} done***")
+        if index == 20:
+            break
+    print(f"Least fails : {bestfail} with {bestword_failure}")
+    print(f"Best score: {bestscore} with {bestword_score}")
 
-    print(f"Average guess score {sum(outlist)/len(outlist)}")
+
+def main():
+    # b = test_guess("allay", "llama")
+    # assert b == ["y", "g", "y", "y", "b"]
+    # test_wordguess("arose")
+    # test_wordguess("delve")
+    # test_wordguess("canny")
+    # test_wordguess("tepid")
+    # test_wordguess("zests")
+    # test_wordguess("being")
+    # test_wordguess("fully")
+    # test_wordguess("purer")
+    # test_wordguess("fishy")
+    # test_wordguess("crook")
+    # test_wordguess("masts")
+    # test_wordguess("pumps")
+    # test_wordguess("undue")
+    # test_wordguess("drool")
+    # test_wordguess("palls")
+    # with open("/usr/share/dict/words") as dictionary:
+    #     templist = dictionary.readlines()
+    #     wordlist = list(
+    #         dict.fromkeys(
+    #             [
+    #                 i.strip().lower()
+    #                 for i in templist
+    #                 if len(i.strip()) == 5
+    #                 and i.strip().isalpha()
+    #                 and i.isascii()
+    #                 and i.islower()
+    #             ]
+    #         )
+    #     )
+    # outlist = []
+    # index = 1
+    # for i in wordlist:
+    #     print(f"Guessing on {i}")
+    #     outlist.append(test_wordguess(i, False))
+    #     print(f"----------{index*100/len(wordlist)}% done----------")
+    #     index += 1
+
+    # print(f"Average guess score {sum(outlist)/len(outlist)}")
+    # print(f"Fails on {len([i for i in outlist if i>6])} words")
+    find_best_starting_word()
 
 
 if __name__ == "__main__":
