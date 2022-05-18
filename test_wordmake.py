@@ -80,76 +80,59 @@ def find_all(string, substring):
 
 
 def test_wordguess(finalword, debug=True):
-    with open("/usr/share/dict/words") as dictionary:
-        templist = dictionary.readlines()
-        wordlist = set(
-            [
-                i.strip().lower()
-                for i in templist
-                if len(i.strip()) == 5 and i.strip().isalpha() and i.isascii()
-            ]
+    with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
+        wordlist = list(
+            dict.fromkeys(
+                [
+                    i.strip().lower()
+                    for i in dictionary.readlines()
+                    if len(i.strip()) == 5
+                    and i.strip().isalpha()
+                    and i.isascii()
+                    and i.islower()
+                ]
+            )
         )
 
-    myCounter = Counter([j for i in wordlist for j in i])
-    guessWord = wordmake.wordsuggest(myCounter, wordlist, 5)
+    my_counter = Counter([j for i in wordlist for j in i])
+    guess_word = wordmake.wordsuggest(my_counter, wordlist, 5)
+    # guess_word = "crate"
+    prev_guesses = []
     guessCount = 0
     yellows = {}
     greens = {}
-    blacks = set([])
+    blacks = {}
+
+    updatedlist = wordlist
 
     while sum([len(i) for i in greens.values()]) != 5:
         if debug:
-            print(f"Guessing {guessWord} for {finalword}")
-        results = test_guess(guessWord, finalword)
-        index = 0
-        for i in guessWord:
-            status = results[index]
-            if status == "g":
-                if i in greens.keys():
-                    greens[i].add(index)
-                else:
-                    greens[i] = set([index])
-            elif status == "y":
-                if i in yellows.keys():
-                    yellows[i].add(index)
-                else:
-                    yellows[i] = set([index])
-            elif status == "b":
-                blacks.add(i)
-            else:
-                status = ""
-            index += 1
+            print(f"Guessing {guess_word} for {finalword}")
+        results = test_guess(guess_word, finalword)
+        if debug:
+            print(f"Got {results}")
 
-        updatedlist = []
+        greens, yellows, blacks = wordmake.guess_eval(
+            guess_word, results, greens, yellows, blacks
+        )
 
-        for i in wordlist:
-            valid = True
-            for letter in blacks:
-                if (
-                    letter in i
-                    and letter not in yellows.keys()
-                    and letter not in greens.keys()
-                ):
-                    valid = False
-            for letter, pos in yellows.items():
-                for num in pos:
-                    if i[num] is letter:
-                        valid = False
-                if letter not in i:
-                    valid = False
-            for letter, pos in greens.items():
-                for num in pos:
-                    if i[num] is not letter:
-                        valid = False
-            if valid:
-                updatedlist.append(i)
+        updatedlist = wordmake.gen_new_list(updatedlist, yellows, greens, blacks)
 
-        newCounter = Counter([j for i in updatedlist for j in i])
-        if newCounter:
-            guessWord = wordmake.wordsuggest(myCounter, updatedlist, 5)
+        my_counter = Counter([j for i in updatedlist for j in i])
+        print(my_counter.most_common(10))
+        if my_counter:
+            prev_guesses.append(guess_word)
+            guess_word = wordmake.wordsuggest(my_counter, updatedlist, 5)
+            if (
+                len(prev_guesses) > 1
+                and prev_guesses[-1] is guess_word
+                and prev_guesses[-2] is guess_word
+            ):
+                raise ValueError
+            print(guess_word)
             guessCount += 1
 
-    print(f"{guessWord} was correct! Guessed in {guessCount} guesses")
+    print(f"{guess_word} was correct! Guessed in {guessCount} guesses")
     return guessCount
 
 
@@ -162,26 +145,38 @@ def main():
     test_wordguess("tepid")
     test_wordguess("zests")
     test_wordguess("being")
-    # with open("/usr/share/dict/words") as dictionary:
-    #     templist = dictionary.readlines()
-    #     wordlist = set(
-    #         [
-    #             i.strip().lower()
-    #             for i in templist
-    #             if len(i.strip()) == 5
-    #             and i.strip().isalpha()
-    #             and i.isascii()
-    #             and i.islower()
-    #         ]
-    #     )
-    # outlist = []
-    # index = 0
-    # for i in wordlist:
-    #     outlist.append(test_wordguess(i, False))
-    #     print(f"----------{index*100/len(wordlist)}% done----------")
-    #     index += 1
+    test_wordguess("fully")
+    test_wordguess("purer")
+    test_wordguess("fishy")
+    test_wordguess("crook")
+    test_wordguess("masts")
+    test_wordguess("pumps")
+    test_wordguess("undue")
+    test_wordguess("drool")
+    test_wordguess("palls")
+    with open("/usr/share/dict/words") as dictionary:
+        templist = dictionary.readlines()
+        wordlist = list(
+            dict.fromkeys(
+                [
+                    i.strip().lower()
+                    for i in templist
+                    if len(i.strip()) == 5
+                    and i.strip().isalpha()
+                    and i.isascii()
+                    and i.islower()
+                ]
+            )
+        )
+    outlist = []
+    index = 1
+    for i in wordlist:
+        print(f"Guessing on {i}")
+        outlist.append(test_wordguess(i, False))
+        print(f"----------{index*100/len(wordlist)}% done----------")
+        index += 1
 
-    # print(f"Average guess score {sum(outlist)/len(outlist)}")
+    print(f"Average guess score {sum(outlist)/len(outlist)}")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,14 @@
+"""
+This is the module docstring.
+"""
+
 from collections import Counter
 
 
 def word_make(char_list, length):
+    """
+    This is the function docstring.
+    """
     outlist = []
     if length == 1:
         return char_list
@@ -12,107 +19,152 @@ def word_make(char_list, length):
 
 
 def wordsuggest(counter, wordlist, depth):
+    """
+    This is the function docstring.
+    """
     letters = counter.most_common(depth)
-    newlist = [j for j in wordlist if all([k in [i[0] for i in letters] for k in j])]
+    newlist = [j for j in wordlist if all((k in [i[0] for i in letters] for k in j))]
     if newlist:
         bestword = newlist[0]
         bestcount = 0
         for i in newlist:
-            count = sum([counter[letter] for letter in set(i)])
+            count = sum([counter[letter] for letter in dict.fromkeys(i).keys()])
             if count > bestcount:
                 bestword = i
                 bestcount = count
-        if len(set(i)) < len(list(i)) and len(wordlist) > 1 and depth < len(counter):
+        if (
+            len(set(bestword)) < len(list(bestword))
+            and len(wordlist) > 1
+            and depth < len(counter)
+        ):
             trialword = wordsuggest(counter, wordlist, depth + 1)
-            newcount = sum([counter[letter] for letter in set(trialword)])
+            newcount = sum(
+                [counter[letter] for letter in dict.fromkeys(trialword).keys()]
+            )
             if newcount > count:
                 return trialword
-            else:
-                return bestword
+            return bestword
         return bestword
-    else:
-        return wordsuggest(counter, wordlist, depth + 1)
+    return wordsuggest(counter, wordlist, depth + 1)
+
+
+def collect_input(guess):
+    """
+    This is the function docstring.
+    """
+    outlist = []
+    for i in guess:
+        status = ""
+        while not status:
+            print(f"Was {i} g, y, or b?")
+            status = str(input())
+            if status not in list("gyb"):
+                status = ""
+            else:
+                outlist.append(status)
+    return outlist
+
+
+def guess_eval(guess, result, greens, yellows, blacks):
+    """
+    This is the function docstring.
+    """
+    for index, i in enumerate(guess):
+        if result[index] == "g":
+            if i in greens:
+                greens[i][index] = None
+            else:
+                greens[i] = dict.fromkeys([index])
+        elif result[index] == "y":
+            if i in yellows:
+                yellows[i][index] = None
+            else:
+                yellows[i] = dict.fromkeys([index])
+        elif result[index] == "b":
+            if i in blacks:
+                blacks[i][index] = None
+            else:
+                blacks[i] = dict.fromkeys([index])
+    return greens, yellows, blacks
+
+
+def gen_new_list(wordlist, yellows, greens, blacks):
+    updatedlist = []
+
+    for i in wordlist:
+        valid = validate_word(wordlist, yellows, greens, blacks, i)
+        if valid:
+            updatedlist.append(i)
+
+    return updatedlist
+
+
+def validate_word(wordlist, yellows, greens, blacks, i):
+    valid = True
+    for letter, pos in blacks.items():
+        if letter in i and letter not in yellows and letter not in greens:
+            return False
+        elif letter in i and (letter in yellows or letter in greens):
+            valid = not any((i[num] is letter for num in pos))
+            if not valid:
+                return False
+    for letter, pos in yellows.items():
+        for num in pos:
+            if i[num] is letter:
+                return False
+        if letter not in i:
+            return False
+    for letter, pos in greens.items():
+        for num in pos:
+            if i[num] is not letter:
+                return False
+    return valid
 
 
 def main():
-
-    alphabet = "abcdefghijklmnopqrstuvwxyz"
+    """
+    This is the function docstring.
+    """
     wordlist = ["table", "saber", "talon", "eager", "stuck"]
 
-    with open("/usr/share/dict/words") as dictionary:
-        templist = dictionary.readlines()
-        wordlist = set(
-            [
-                i.strip().lower()
-                for i in templist
-                if len(i.strip()) == 5 and i.strip().isalpha() and i.isascii()
-            ]
+    with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
+        wordlist = list(
+            dict.fromkeys(
+                [
+                    i.strip().lower()
+                    for i in dictionary.readlines()
+                    if len(i.strip()) == 5
+                    and i.strip().isalpha()
+                    and i.isascii()
+                    and i.islower()
+                ]
+            )
         )
 
-    myCounter = Counter([j for i in wordlist for j in i])
+    my_counter = Counter([j for i in wordlist for j in i])
 
-    print(myCounter.most_common(10))
-
-    guessWord = wordsuggest(myCounter, wordlist, 5)
-    print(guessWord)
+    guess_word = wordsuggest(my_counter, wordlist, 5)
+    print(guess_word)
 
     yellows = {}
     greens = {}
-    blacks = set([])
+    blacks = {}
+
+    updatedlist = wordlist
 
     while sum([len(i) for i in greens.values()]) != 5:
 
-        index = 0
-        for i in guessWord:
-            status = ""
-            while not status:
-                print(f"Was {i} g, y, or b?")
-                status = str(input())
-                if status == "g":
-                    if i in greens.keys():
-                        greens[i].add(index)
-                    else:
-                        greens[i] = set([index])
-                elif status == "y":
-                    if i in yellows.keys():
-                        yellows[i].add(index)
-                    else:
-                        yellows[i] = set([index])
-                elif status == "b":
-                    blacks.add(i)
-                else:
-                    status = ""
-            index += 1
+        result = collect_input(guess_word)
+        greens, yellows, blacks = guess_eval(
+            guess_word, result, greens, yellows, blacks
+        )
 
-        updatedlist = []
+        updatedlist = gen_new_list(updatedlist, yellows, greens, blacks)
 
-        for i in wordlist:
-            valid = True
-            for letter in blacks:
-                if (
-                    letter in i
-                    and letter not in yellows.keys()
-                    and letter not in greens.keys()
-                ):
-                    valid = False
-            for letter, pos in yellows.items():
-                for num in pos:
-                    if i[num] is letter:
-                        valid = False
-                if letter not in i:
-                    valid = False
-            for letter, pos in greens.items():
-                for num in pos:
-                    if i[num] is not letter:
-                        valid = False
-            if valid:
-                updatedlist.append(i)
-
-        newCounter = Counter([j for i in updatedlist for j in i])
-        print(newCounter.most_common(10))
-        if newCounter:
-            guessWord = wordsuggest(myCounter, updatedlist, 5)
-            print(guessWord)
+        my_counter = Counter([j for i in updatedlist for j in i])
+        if my_counter:
+            guess_word = wordsuggest(my_counter, updatedlist, 5)
+            print(guess_word)
 
 
 if __name__ == "__main__":
