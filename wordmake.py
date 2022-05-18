@@ -28,7 +28,7 @@ def wordsuggest(counter, wordlist, depth):
         bestword = newlist[0]
         bestcount = 0
         for i in newlist:
-            count = sum([counter[letter] for letter in dict.fromkeys(i).keys()])
+            count = sum([counter[letter] for letter in dict.fromkeys(i)])
             if count > bestcount:
                 bestword = i
                 bestcount = count
@@ -38,9 +38,7 @@ def wordsuggest(counter, wordlist, depth):
             and depth < len(counter)
         ):
             trialword = wordsuggest(counter, wordlist, depth + 1)
-            newcount = sum(
-                [counter[letter] for letter in dict.fromkeys(trialword).keys()]
-            )
+            newcount = sum([counter[letter] for letter in dict.fromkeys(trialword)])
             if newcount > count:
                 return trialword
             return bestword
@@ -89,34 +87,39 @@ def guess_eval(guess, result, greens, yellows, blacks):
 
 
 def gen_new_list(wordlist, yellows, greens, blacks):
+    """
+    Add documentation
+    """
     updatedlist = []
 
     for i in wordlist:
-        valid = validate_word(wordlist, yellows, greens, blacks, i)
-        if valid:
+        if validate_word(yellows, greens, blacks, i):
             updatedlist.append(i)
 
     return updatedlist
 
 
-def validate_word(wordlist, yellows, greens, blacks, i):
+def validate_word(yellows, greens, blacks, word):
+    """
+    Add documentation
+    """
     valid = True
     for letter, pos in blacks.items():
-        if letter in i and letter not in yellows and letter not in greens:
+        if letter in word and letter not in yellows and letter not in greens:
             return False
-        elif letter in i and (letter in yellows or letter in greens):
-            valid = not any((i[num] is letter for num in pos))
+        if letter in word and (letter in yellows or letter in greens):
+            valid = not any((word[num] is letter for num in pos))
             if not valid:
                 return False
     for letter, pos in yellows.items():
         for num in pos:
-            if i[num] is letter:
+            if word[num] is letter:
                 return False
-        if letter not in i:
+        if letter not in word:
             return False
     for letter, pos in greens.items():
         for num in pos:
-            if i[num] is not letter:
+            if word[num] is not letter:
                 return False
     return valid
 

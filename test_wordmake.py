@@ -1,3 +1,7 @@
+"""
+Tests wordmake.py
+"""
+
 from collections import Counter
 
 import wordmake
@@ -19,57 +23,35 @@ def test_guess(guessword, finalword):
     ['b', 'g', 'g', 'b', 'g']
     >>> test_guess("allay", "llama")
     ['y', 'g', 'y', 'y', 'b']
+    >>> test_guess("llama", "alloy")
+    ['y', 'g', 'y', 'b', 'b']
     """
     if guessword is finalword:
         return ["g"] * 5
     outarray = ["b"] * 5
     letter_freq = Counter(list(finalword))
-    guess_freq = Counter(list(guessword))
     letters_guessed = set(guessword)
     for i in letters_guessed:
-        if not letter_freq.get(i):
-            continue
-        elif letter_freq.get(i) == 1 and guess_freq.get(i) == 1:
-            if guessword.find(i) == finalword.find(i):
-                outarray[guessword.find(i)] = "g"
-            else:
-                outarray[guessword.find(i)] = "y"
-        elif letter_freq.get(i) > 1 and guess_freq.get(i) == 1:
-            letter_indices = list(find_all(finalword, i))
-            posRight = False
-            for index in letter_indices:
-                if guessword[index] is finalword[index]:
-                    outarray[index] = "g"
-                    posRight = True
-            if not posRight:
-                outarray[guessword.find(i)] = "y"
-        elif letter_freq.get(i) == 1 and guess_freq.get(i) > 1:
-            letter_indices = list(find_all(guessword, i))
-            posRight = False
-            for index in letter_indices:
-                if guessword[index] == finalword[index]:
-                    outarray[index] = "g"
-                    posRight = True
-            if not posRight:
-                outarray[guessword.find(i)] = "y"
-        elif letter_freq.get(i) > 1 and guess_freq.get(i) > 1:
-            letter_indices_guess = list(find_all(guessword, i))
-            posCount = 0
+        letter_indices_guess = list(find_all(guessword, i))
+        pos_count = 0
+        for index in letter_indices_guess:
+            if guessword[index] == finalword[index]:
+                outarray[index] = "g"
+                pos_count += 1
+        if pos_count < int(letter_freq.get(i) or 0):
             for index in letter_indices_guess:
-                if guessword[index] == finalword[index]:
-                    outarray[index] = "g"
-                    posCount += 1
-            if posCount < letter_freq.get(i):
-                for index in letter_indices_guess:
-                    if outarray[index] != "g":
-                        outarray[index] = "y"
-                        posCount += 1
-                    if posCount == letter_freq.get(i):
-                        break
+                if outarray[index] != "g":
+                    outarray[index] = "y"
+                    pos_count += 1
+                if pos_count == letter_freq.get(i):
+                    break
     return outarray
 
 
 def find_all(string, substring):
+    """
+    Returns a generator that finds instances of a substring in a string
+    """
     start = 0
     while True:
         start = string.find(substring, start)
@@ -80,6 +62,9 @@ def find_all(string, substring):
 
 
 def test_wordguess(finalword, debug=True):
+    """
+    Test wordmake's wordguess method
+    """
     with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
         wordlist = list(
             dict.fromkeys(
@@ -98,7 +83,7 @@ def test_wordguess(finalword, debug=True):
     guess_word = wordmake.wordsuggest(my_counter, wordlist, 5)
     # guess_word = "crate"
     prev_guesses = []
-    guessCount = 0
+    guess_count = 0
     yellows = {}
     greens = {}
     blacks = {}
@@ -119,7 +104,6 @@ def test_wordguess(finalword, debug=True):
         updatedlist = wordmake.gen_new_list(updatedlist, yellows, greens, blacks)
 
         my_counter = Counter([j for i in updatedlist for j in i])
-        print(my_counter.most_common(10))
         if my_counter:
             prev_guesses.append(guess_word)
             guess_word = wordmake.wordsuggest(my_counter, updatedlist, 5)
@@ -130,15 +114,18 @@ def test_wordguess(finalword, debug=True):
             ):
                 raise ValueError
             print(guess_word)
-            guessCount += 1
+            guess_count += 1
 
-    print(f"{guess_word} was correct! Guessed in {guessCount} guesses")
-    return guessCount
+    print(f"{guess_word} was correct! Guessed in {guess_count} guesses")
+    return guess_count
 
 
 def main():
-    b = test_guess("allay", "llama")
-    assert b == ["y", "g", "y", "y", "b"]
+    """
+    Runs an array of test cases
+    """
+    test_case = test_guess("allay", "llama")
+    assert test_case == ["y", "g", "y", "y", "b"]
     test_wordguess("arose")
     test_wordguess("delve")
     test_wordguess("canny")
@@ -154,7 +141,7 @@ def main():
     test_wordguess("undue")
     test_wordguess("drool")
     test_wordguess("palls")
-    with open("/usr/share/dict/words") as dictionary:
+    with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
         templist = dictionary.readlines()
         wordlist = list(
             dict.fromkeys(
@@ -173,7 +160,7 @@ def main():
     for i in wordlist:
         print(f"Guessing on {i}")
         outlist.append(test_wordguess(i, False))
-        print(f"----------{index*100/len(wordlist)}% done----------")
+        print(f"----------{index/len(wordlist):.2%} done----------")
         index += 1
 
     print(f"Average guess score {sum(outlist)/len(outlist)}")
