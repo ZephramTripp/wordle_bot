@@ -79,7 +79,7 @@ def find_all(string, substring):
         start += 1
 
 
-def test_wordguess(finalword, debug=True):
+def test_wordguess(finalword, startingword=None, debug=True):
     with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
         wordlist = list(
             dict.fromkeys(
@@ -95,8 +95,10 @@ def test_wordguess(finalword, debug=True):
         )
 
     my_counter = Counter([j for i in wordlist for j in i])
-    guess_word = wordmake.wordsuggest(my_counter, wordlist, 5)
-    # guess_word = "crate"
+    if startingword is None:
+        guess_word = wordmake.wordsuggest(my_counter, wordlist, 5)
+    else:
+        guess_word = startingword
     prev_guesses = []
     guessCount = 0
     yellows = {}
@@ -119,7 +121,7 @@ def test_wordguess(finalword, debug=True):
         updatedlist = wordmake.gen_new_list(updatedlist, yellows, greens, blacks)
 
         my_counter = Counter([j for i in updatedlist for j in i])
-        print(my_counter.most_common(10))
+        #print(my_counter.most_common(10))
         if my_counter:
             prev_guesses.append(guess_word)
             guess_word = wordmake.wordsuggest(my_counter, updatedlist, 5)
@@ -129,31 +131,13 @@ def test_wordguess(finalword, debug=True):
                 and prev_guesses[-2] is guess_word
             ):
                 raise ValueError
-            print(guess_word)
+            #print(guess_word)
             guessCount += 1
 
-    print(f"{guess_word} was correct! Guessed in {guessCount} guesses")
+    #print(f"{guess_word} was correct! Guessed in {guessCount} guesses")
     return guessCount
 
-
-def main():
-    b = test_guess("allay", "llama")
-    assert b == ["y", "g", "y", "y", "b"]
-    test_wordguess("arose")
-    test_wordguess("delve")
-    test_wordguess("canny")
-    test_wordguess("tepid")
-    test_wordguess("zests")
-    test_wordguess("being")
-    test_wordguess("fully")
-    test_wordguess("purer")
-    test_wordguess("fishy")
-    test_wordguess("crook")
-    test_wordguess("masts")
-    test_wordguess("pumps")
-    test_wordguess("undue")
-    test_wordguess("drool")
-    test_wordguess("palls")
+def find_best_starting_word():
     with open("/usr/share/dict/words") as dictionary:
         templist = dictionary.readlines()
         wordlist = list(
@@ -170,14 +154,76 @@ def main():
         )
     outlist = []
     index = 1
-    for i in wordlist:
-        print(f"Guessing on {i}")
-        outlist.append(test_wordguess(i, False))
-        print(f"----------{index*100/len(wordlist)}% done----------")
+    bestword_failure = ""
+    bestword_score = ""
+    bestfail = 500
+    bestscore = 6
+    for word in wordlist:
+        subindex = 1
+        for i in wordlist:
+            #print(f"Guessing on {i}")
+            outlist.append(test_wordguess(i, word, False))
+            #print(f"----------{subindex/len(wordlist):.2%} done----------")
+            subindex += 1
+        #print(f"Average guess score {sum(outlist)/len(outlist)}")
+        if sum(outlist)/len(outlist) < bestscore:
+            bestscore = sum(outlist)/len(outlist)
+            bestword_score = word
+        #print(f"Fails on {len([i for i in outlist if i>6])} words")
+        if len([i for i in outlist if i>6]) < bestfail:
+            bestfail = len([i for i in outlist if i>6])
+            bestword_failure = word
         index += 1
+        #print(f"***{index/len(wordlist):.2%} done***")
+        if index == 2:
+            break
+    print(f"Least fails : {bestfail} with {bestword_failure}")
+    print(f"Best score: {bestscore} with {bestword_score}")
 
-    print(f"Average guess score {sum(outlist)/len(outlist)}")
 
+def main():
+    # b = test_guess("allay", "llama")
+    # assert b == ["y", "g", "y", "y", "b"]
+    # test_wordguess("arose")
+    # test_wordguess("delve")
+    # test_wordguess("canny")
+    # test_wordguess("tepid")
+    # test_wordguess("zests")
+    # test_wordguess("being")
+    # test_wordguess("fully")
+    # test_wordguess("purer")
+    # test_wordguess("fishy")
+    # test_wordguess("crook")
+    # test_wordguess("masts")
+    # test_wordguess("pumps")
+    # test_wordguess("undue")
+    # test_wordguess("drool")
+    # test_wordguess("palls")
+    # with open("/usr/share/dict/words") as dictionary:
+    #     templist = dictionary.readlines()
+    #     wordlist = list(
+    #         dict.fromkeys(
+    #             [
+    #                 i.strip().lower()
+    #                 for i in templist
+    #                 if len(i.strip()) == 5
+    #                 and i.strip().isalpha()
+    #                 and i.isascii()
+    #                 and i.islower()
+    #             ]
+    #         )
+    #     )
+    # outlist = []
+    # index = 1
+    # for i in wordlist:
+    #     print(f"Guessing on {i}")
+    #     outlist.append(test_wordguess(i, False))
+    #     print(f"----------{index*100/len(wordlist)}% done----------")
+    #     index += 1
+
+    # print(f"Average guess score {sum(outlist)/len(outlist)}")
+    # print(f"Fails on {len([i for i in outlist if i>6])} words")
+    find_best_starting_word()
 
 if __name__ == "__main__":
     main()
