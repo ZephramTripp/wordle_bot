@@ -6,9 +6,35 @@ It should probably containing a class definition, but it doesn't yet.
 from collections import Counter
 
 
+def get_wordlist(filename):
+    """
+    Opens a textfile and extracts lines containing five-letter, lowercase, ASCII words
+
+    :param filename: Name of the file to open
+    :type filename: string
+    :return: List of five letter words
+    :rtype: list of strings
+    """
+    with open(filename, encoding="utf-8") as dictionary:
+        wordlist = list(
+            dict.fromkeys(
+                [
+                    i.strip().lower()
+                    for i in dictionary.readlines()
+                    if len(i.strip()) == 5
+                    and i.strip().isalpha()
+                    and i.isascii()
+                    and i.islower()
+                ]
+            )
+        )
+    return wordlist
+
+
 def word_make(char_list, length):
     """
-    Takes a list of characters and an integer length and generates all combinations of the characters at that length.
+    Takes a list of characters and an integer length and generates all
+    combinations of the characters at that length.
 
     :param char_list: The list of characters to use
     :type char_list: list of strings
@@ -28,7 +54,8 @@ def word_make(char_list, length):
 
 def wordsuggest(counter, wordlist, depth):
     """
-    Suggests the word with the greatest letter frequency usage from the given list and frequency data
+    Suggests the word with the greatest letter frequency usage
+    from the given list and frequency data
 
     :param counter: The frequency data of letters in the wordlist
     :type counter: collections.Counter
@@ -87,7 +114,8 @@ def collect_input(guess):
 
 def guess_eval(guess, result, greens, yellows, blacks):
     """
-    A helper function to move the results of a guess evaluation to the dictionaries of guessed values
+    A helper function to move the results of a guess evaluation
+    to the dictionaries of guessed values
 
     :param guess: The word guessed
     :type guess: string
@@ -97,7 +125,7 @@ def guess_eval(guess, result, greens, yellows, blacks):
     :type greens: dictionary
     :param yellows: The previous known letters with verified existence but not placement
     :type yellows: dictionary
-    :param blacks: The previous known letters with verified non-existence (potentially at only a given placement)
+    :param blacks: The previous known letters with verified non-existence
     :type blacks: dictionary
     :return: The three input dictionaries with the new information added
     :rtype: three dictionaries
@@ -123,7 +151,8 @@ def guess_eval(guess, result, greens, yellows, blacks):
 
 def gen_new_list(wordlist, yellows, greens, blacks):
     """
-    Given a wordlist and the dictionaries containing the results of previous guesses, generates a new wordlist.
+    Given a wordlist and the dictionaries containing the results of previous guesses,
+    generates a new wordlist.
 
     :param wordlist: The previous wordlist
     :type wordlist: list of strings
@@ -131,7 +160,7 @@ def gen_new_list(wordlist, yellows, greens, blacks):
     :type yellows: dictionary
     :param greens: The previous known letters with verified existence and placement
     :type greens: dictionary
-    :param blacks: The previous known letters with verified non-existence (potentially at only a given placement)
+    :param blacks: The previous known letters with verified non-existence
     :type blacks: dictionary
     :return: The new word list
     :rtype: list of strings
@@ -153,7 +182,7 @@ def validate_word(yellows, greens, blacks, word):
     :type yellows: dictionary
     :param greens: The previous known letters with verified existence and placement
     :type greens: dictionary
-    :param blacks: The previous known letters with verified non-existence (potentially at only a given placement)
+    :param blacks: The previous known letters with verified non-existence
     :type blacks: dictionary
     :param wordlist: The word to evaluate
     :type wordlist: string
@@ -183,23 +212,10 @@ def validate_word(yellows, greens, blacks, word):
 
 def main():
     """
-    The main function plays one game of Wordle against the user, with the computer making guesses and the user verifying the computer's guesses
+    The main function plays one game of Wordle against the user,
+    with the computer making guesses and the user verifying the computer's guesses
     """
-    wordlist = ["table", "saber", "talon", "eager", "stuck"]
-
-    with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
-        wordlist = list(
-            dict.fromkeys(
-                [
-                    i.strip().lower()
-                    for i in dictionary.readlines()
-                    if len(i.strip()) == 5
-                    and i.strip().isalpha()
-                    and i.isascii()
-                    and i.islower()
-                ]
-            )
-        )
+    wordlist = get_wordlist("/usr/share/dict/words")
 
     my_counter = Counter([j for i in wordlist for j in i])
 
@@ -207,9 +223,7 @@ def main():
     guess_word = "plant"
     print(guess_word)
 
-    yellows = {}
-    greens = {}
-    blacks = {}
+    yellows, greens, blacks = {}
 
     updatedlist = wordlist
 

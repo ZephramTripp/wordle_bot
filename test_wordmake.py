@@ -4,8 +4,8 @@ Tests the wordmake module
 
 from collections import Counter
 
-import wordmake
 import sys
+import wordmake
 
 
 def test_guess(guessword, finalword):
@@ -100,19 +100,7 @@ def test_wordguess(finalword, startingword=None, debug=True, wordlist=None):
     :rtype: int
     """
     if not wordlist:
-        with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
-            wordlist = list(
-                dict.fromkeys(
-                    [
-                        i.strip().lower()
-                        for i in dictionary.readlines()
-                        if len(i.strip()) == 5
-                        and i.strip().isalpha()
-                        and i.isascii()
-                        and i.islower()
-                    ]
-                )
-            )
+        wordlist = wordmake.get_wordlist("/usr/share/dict/words")
 
     my_counter = Counter([j for i in wordlist for j in i])
     if startingword is None:
@@ -121,9 +109,7 @@ def test_wordguess(finalword, startingword=None, debug=True, wordlist=None):
         guess_word = startingword
     prev_guesses = []
     guess_count = 0
-    yellows = {}
-    greens = {}
-    blacks = {}
+    yellows, blacks, greens = {}
 
     updatedlist = wordlist
 
@@ -161,49 +147,35 @@ def find_best_starting_word():
     """
     Tries to find the best starting word in the Ubuntu dictionary
     """
-    with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
-        templist = dictionary.readlines()
-        wordlist = list(
-            dict.fromkeys(
-                [
-                    i.strip().lower()
-                    for i in templist
-                    if len(i.strip()) == 5
-                    and i.strip().isalpha()
-                    and i.isascii()
-                    and i.islower()
-                ]
-            )
-        )
+    wordlist = wordmake.get_wordlist("/usr/share/dict/words")
 
     print(sys.argv)
     # checklist = wordlist[0:20]
 
-    f = open("results.txt", "w")
-    bestscore = 6
-    bestword_score = ""
-    bestfail = 500
-    bestword_failure = ""
+    with open("results.txt", "w", encoding="utf-8") as fileout:
+        bestscore = 6
+        bestword_score = ""
+        bestfail = 500
+        bestword_failure = ""
 
-    for index, word in enumerate(wordlist):
-        outlist = []
-        for i in wordlist:
-            # print(f"Guessing on {i}")
-            outlist.append(test_wordguess(i, word, False, wordlist))
-            # print(f"----------{subindex/len(wordlist):.2%} done----------")
-        # print(f"Average guess score {sum(outlist)/len(outlist)}")
-        avgscore = sum(outlist) / len(outlist)
-        failcount = len([i for i in outlist if i > 6])
-        f.write(f"{word},{avgscore},{failcount}\n")
-        if avgscore < bestscore:
-            bestscore = avgscore
-            bestword_score = word
-        # print(f"Fails on {len([i for i in outlist if i>6])} words")
-        if failcount < bestfail:
-            bestfail = failcount
-            bestword_failure = word
-        print(f"***{(index+1)/len(wordlist):.2%} done***")
-    f.close()
+        for index, word in enumerate(wordlist):
+            outlist = []
+            for i in wordlist:
+                # print(f"Guessing on {i}")
+                outlist.append(test_wordguess(i, word, False, wordlist))
+                # print(f"----------{subindex/len(wordlist):.2%} done----------")
+            # print(f"Average guess score {sum(outlist)/len(outlist)}")
+            avgscore = sum(outlist) / len(outlist)
+            failcount = len([i for i in outlist if i > 6])
+            fileout.write(f"{word},{avgscore},{failcount}\n")
+            if avgscore < bestscore:
+                bestscore = avgscore
+                bestword_score = word
+            # print(f"Fails on {len([i for i in outlist if i>6])} words")
+            if failcount < bestfail:
+                bestfail = failcount
+                bestword_failure = word
+            print(f"***{(index+1)/len(wordlist):.2%} done***")
     print(f"Least fails : {bestfail} with {bestword_failure}")
     print(f"Best score: {bestscore} with {bestword_score}")
 
@@ -216,7 +188,7 @@ def check_starting_word(startingword):
     :type startingword: string
     """
     print("Trying " + startingword)
-    with open("/usr/share/dict/words") as dictionary:
+    with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
         templist = dictionary.readlines()
         wordlist = list(
             dict.fromkeys(
