@@ -161,7 +161,7 @@ def find_best_starting_word():
     """
     Tries to find the best starting word in the Ubuntu dictionary
     """
-    with open("/usr/share/dict/words") as dictionary:
+    with open("/usr/share/dict/words", encoding="utf-8") as dictionary:
         templist = dictionary.readlines()
         wordlist = list(
             dict.fromkeys(
