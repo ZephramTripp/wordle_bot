@@ -4,6 +4,7 @@ It should probably containing a class definition, but it doesn't yet.
 """
 
 from collections import Counter
+from collections import namedtuple
 
 
 class Wordler:
@@ -11,21 +12,25 @@ class Wordler:
     The Wordler class encapsulates the solver half of the Wordlebot code
     """
 
-    def __init__(self, printy=True, debug=False):
+    def __init__(self, verbosity=1):
         self.length = 5
         self.wordlist = []
-        self.greens = {}
-        self.yellows = {}
-        self.blacks = {}
+        checked_letters = namedtuple("checked_letters", ["greens", "yellows", "blacks"])
+        self.checked_letters = checked_letters({}, {}, {})
         self.counter = Counter([j for i in self.wordlist for j in i])
-        self.game_over = False
-        self.gamelist = self.wordlist
-        self.printy = printy
-        self.guess_count = 0
-        self.finalword = None
-        self.debug = debug
+        self.game_attrs = {
+            "game_over": False,
+            "game_list": self.wordlist,
+            "guess_count": 0,
+            "final_word": None,
+        }
+        self.verbosity = verbosity
+        self.guess_word = ""
 
     def add_wordlist(self, filename=None, wordlist=None):
+        """
+        Adds a word list to the Wordler objects
+        """
         if filename:
             with open(filename, encoding="utf-8") as dictionary:
                 self.wordlist = list(
@@ -33,7 +38,7 @@ class Wordler:
                         [
                             i.strip().lower()
                             for i in dictionary.readlines()
-                            if len(i.strip()) == 5
+                            if len(i.strip()) == self.length
                             and i.strip().isalpha()
                             and i.isascii()
                             and i.islower()
@@ -42,6 +47,12 @@ class Wordler:
                 )
         if wordlist:
             self.wordlist = wordlist
+
+    def get_wordlist(self):
+        """
+        Returns the wordlist member
+        """
+        return self.wordlist
 
     def wordsuggest(self, depth):
         """
@@ -59,7 +70,9 @@ class Wordler:
         """
         letters = self.counter.most_common(depth)
         newlist = [
-            j for j in self.gamelist if all((k in [i[0] for i in letters] for k in j))
+            j
+            for j in self.game_attrs["game_list"]
+            if all((k in [i[0] for i in letters] for k in j))
         ]
         if newlist:
             bestword = newlist[0]
@@ -104,20 +117,20 @@ class Wordler:
         """
         for index, i in enumerate(guess):
             if result[index] == "g":
-                if i in self.greens:
-                    self.greens[i][index] = None
+                if i in self.checked_letters.greens:
+                    self.checked_letters.greens[i][index] = None
                 else:
-                    self.greens[i] = dict.fromkeys([index])
+                    self.checked_letters.greens[i] = dict.fromkeys([index])
             elif result[index] == "y":
-                if i in self.yellows:
-                    self.yellows[i][index] = None
+                if i in self.checked_letters.yellows:
+                    self.checked_letters.yellows[i][index] = None
                 else:
-                    self.yellows[i] = dict.fromkeys([index])
+                    self.checked_letters.yellows[i] = dict.fromkeys([index])
             elif result[index] == "b":
-                if i in self.blacks:
-                    self.blacks[i][index] = None
+                if i in self.checked_letters.blacks:
+                    self.checked_letters.blacks[i][index] = None
                 else:
-                    self.blacks[i] = dict.fromkeys([index])
+                    self.checked_letters.blacks[i] = dict.fromkeys([index])
 
     def gen_new_list(self):
         """
@@ -135,7 +148,9 @@ class Wordler:
         :return: The new word list
         :rtype: list of strings
         """
-        self.gamelist = [i for i in self.gamelist if self.validate_word(i)]
+        self.game_attrs["game_list"] = [
+            i for i in self.game_attrs["game_list"] if self.validate_word(i)
+        ]
 
     def validate_word(self, word):
         """
@@ -153,70 +168,84 @@ class Wordler:
         :rtype: bool
         """
         valid = True
-        for letter, pos in self.blacks.items():
+        for letter, pos in self.checked_letters.blacks.items():
             if (
                 letter in word
-                and letter not in self.yellows
-                and letter not in self.greens
+                and letter not in self.checked_letters.yellows
+                and letter not in self.checked_letters.greens
             ):
                 return False
-            if letter in word and (letter in self.yellows or letter in self.greens):
+            if letter in word and (
+                letter in self.checked_letters.yellows
+                or letter in self.checked_letters.greens
+            ):
                 valid = not any((word[num] is letter for num in pos))
                 if not valid:
                     return False
-        for letter, pos in self.yellows.items():
+        for letter, pos in self.checked_letters.yellows.items():
             for num in pos:
                 if word[num] is letter:
                     return False
             if letter not in word:
                 return False
-        for letter, pos in self.greens.items():
+        for letter, pos in self.checked_letters.greens.items():
             for num in pos:
                 if word[num] is not letter:
                     return False
         return valid
 
     def make_guess(self, startingwords):
-        if type(startingwords) == type([]) and self.guess_count < len(startingwords):
-            self.guess_word = startingwords[self.guess_count]
-        elif type(startingwords) == type("") and self.guess_count == 0:
+        """
+        Makes another guess
+        """
+        if isinstance(startingwords, list) and self.game_attrs["guess_count"] < len(
+            startingwords
+        ):
+            self.guess_word = startingwords[self.game_attrs["guess_count"]]
+        elif isinstance(startingwords, str) and self.game_attrs["guess_count"] == 0:
             self.guess_word = startingwords
         else:
             self.guess_word = self.wordsuggest(5)
-        if self.printy:
+        if self.verbosity:
             print(self.guess_word)
-        self.guess_count += 1
+        self.game_attrs["guess_count"] += 1
 
     def eval_word(self, evaluator):
+        """
+        Evaluates the guess, either with user input or an evaluator function
+        """
         if evaluator is None:
             result = collect_input(self.guess_word)
         else:
-            result = evaluator(self.guess_word, self.finalword)
+            result = evaluator(self.guess_word, self.game_attrs["final_word"])
         self.guess_eval(self.guess_word, result)
         self.gen_new_list()
 
     def update_gamestate(self):
-        if sum([len(i) for i in self.greens.values()]) == 5:
-            self.game_over = True
+        """
+        Checks to see if the game is over
+        """
+        if sum([len(i) for i in self.checked_letters.greens.values()]) == self.length:
+            self.game_attrs["game_over"] = True
         else:
-            self.counter = Counter([j for i in self.gamelist for j in i])
+            self.counter = Counter([j for i in self.game_attrs["game_list"] for j in i])
 
-    def play(self, startingwords=None, evaluator=None, finalword=None):
+    def play(self, startingwords=None, evaluator=None, final_word=None):
         """
         The play function plays the game of Wordle against the human
         """
-        self.game_over = False
-        self.gamelist = self.wordlist
-        self.counter = Counter([j for i in self.gamelist for j in i])
-        if finalword:
-            self.finalword = finalword
+        self.game_attrs["game_over"] = False
+        self.game_attrs["game_list"] = self.wordlist
+        self.counter = Counter([j for i in self.game_attrs["game_list"] for j in i])
+        if final_word:
+            self.game_attrs["final_word"] = final_word
 
-        while not self.game_over:
+        while not self.game_attrs["game_over"]:
             self.make_guess(startingwords)
             self.eval_word(evaluator)
             self.update_gamestate()
 
-        return self.guess_count
+        return self.game_attrs["guess_count"]
 
 
 def word_make(char_list, length):
@@ -269,7 +298,7 @@ def main():
     """
     my_wordler = Wordler()
     my_wordler.add_wordlist(filename="/usr/share/dict/words")
-    my_wordler.play(startingwords="plant")
+    my_wordler.play(startingwords=["clamp", "berth"])
 
 
 if __name__ == "__main__":

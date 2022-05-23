@@ -4,7 +4,6 @@ Tests the wordmake module
 
 from collections import Counter
 
-import sys
 import wordmake
 
 
@@ -99,111 +98,24 @@ def test_wordguess(finalword, startingword=None, debug=True, wordlist=None):
     :return: The number of guesses it took to guess the final word
     :rtype: int
     """
-    test_wordler = wordmake.Wordler(printy=False)
-    test_wordler.add_wordlist(
-        wordlist=wordlist
-    ) if wordlist else test_wordler.add_wordlist(filename="/usr/share/dict/words")
+    test_wordler = wordmake.Wordler(verbosity=2 if debug else 0)
+    if wordlist:
+        test_wordler.add_wordlist(wordlist=wordlist)
+    else:
+        test_wordler.add_wordlist(filename="/usr/share/dict/words")
     # print(f"{guess_word} was correct! Guessed in {guessCount} guesses")
     return test_wordler.play(
-        startingwords=startingword, evaluator=test_guess, finalword=finalword
+        startingwords=startingword, evaluator=test_guess, final_word=finalword
     )
-
-
-def test_two_guesses_special(finalword, firstword, wordlist):
-    my_counter = Counter([j for i in wordlist for j in i])
-    guess_word = firstword
-    prev_guesses = []
-    guess_count = 1
-    results = test_guess(guess_word, finalword)
-    greens = {}
-    yellows = {}
-    blacks = {}
-    greens, yellows, blacks = wordmake.guess_eval(
-        guess_word, results, greens, yellows, blacks
-    )
-    updatedlist = wordlist
-    updatedlist = wordmake.gen_new_list(updatedlist, yellows, greens, blacks)
-    updatedlist_special = wordmake.gen_new_list_special(
-        wordlist, yellows, greens, blacks
-    )
-    my_counter_special = Counter([j for i in updatedlist_special for j in i])
-    guess_word = wordmake.wordsuggest(my_counter_special, updatedlist_special, 5)
-
-    while sum([len(i) for i in greens.values()]) != 5:
-        results = test_guess(guess_word, finalword)
-
-        greens, yellows, blacks = wordmake.guess_eval(
-            guess_word, results, greens, yellows, blacks
-        )
-
-        updatedlist = wordmake.gen_new_list(updatedlist, yellows, greens, blacks)
-
-        my_counter = Counter([j for i in updatedlist for j in i])
-        if my_counter:
-            prev_guesses.append(guess_word)
-            guess_word = wordmake.wordsuggest(my_counter, updatedlist, 5)
-            if (
-                len(prev_guesses) > 1
-                and prev_guesses[-1] is guess_word
-                and prev_guesses[-2] is guess_word
-            ):
-                raise ValueError
-            # print(guess_word)
-            guess_count += 1
-
-    # print(f"{guess_word} was correct! Guessed in {guessCount} guesses")
-    return guess_count
-
-
-def test_two_guesses(finalword, firstword, secondword, wordlist):
-    my_counter = Counter([j for i in wordlist for j in i])
-    guess_word = firstword
-    prev_guesses = []
-    guess_count = 1
-    results = test_guess(guess_word, finalword)
-    greens = {}
-    yellows = {}
-    blacks = {}
-    greens, yellows, blacks = wordmake.guess_eval(
-        guess_word, results, greens, yellows, blacks
-    )
-    updatedlist = wordlist
-    updatedlist = wordmake.gen_new_list(updatedlist, yellows, greens, blacks)
-    guess_word = secondword
-
-    while sum([len(i) for i in greens.values()]) != 5:
-        results = test_guess(guess_word, finalword)
-
-        greens, yellows, blacks = wordmake.guess_eval(
-            guess_word, results, greens, yellows, blacks
-        )
-
-        updatedlist = wordmake.gen_new_list(updatedlist, yellows, greens, blacks)
-
-        my_counter = Counter([j for i in updatedlist for j in i])
-        if my_counter:
-            prev_guesses.append(guess_word)
-            guess_word = wordmake.wordsuggest(my_counter, updatedlist, 5)
-            if (
-                len(prev_guesses) > 1
-                and prev_guesses[-1] is guess_word
-                and prev_guesses[-2] is guess_word
-            ):
-                raise ValueError
-            # print(guess_word)
-            guess_count += 1
-
-    # print(f"{guess_word} was correct! Guessed in {guessCount} guesses")
-    return guess_count
 
 
 def find_best_starting_word():
     """
     Tries to find the best starting word in the Ubuntu dictionary
     """
-    wordlist = wordmake.get_wordlist("/usr/share/dict/words")
-
-    print(sys.argv)
+    test_wordler = wordmake.Wordler()
+    test_wordler.add_wordlist(filename="/usr/share/dict/words")
+    wordlist = test_wordler.get_wordlist()
     # checklist = wordlist[0:20]
 
     with open("results.txt", "w", encoding="utf-8") as fileout:
@@ -272,8 +184,8 @@ def main():
     """
     Various test cases to evaluate
     """
-    b = test_guess("allay", "llama")
-    assert b == ["y", "g", "y", "y", "b"]
+    simple_test = test_guess("allay", "llama")
+    assert simple_test == ["y", "g", "y", "y", "b"]
     test_wordguess("arose")
     test_wordguess("delve")
     test_wordguess("canny")
