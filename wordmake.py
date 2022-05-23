@@ -6,29 +6,217 @@ It should probably containing a class definition, but it doesn't yet.
 from collections import Counter
 
 
-def get_wordlist(filename):
+class Wordler:
     """
-    Opens a textfile and extracts lines containing five-letter, lowercase, ASCII words
+    The Wordler class encapsulates the solver half of the Wordlebot code
+    """
 
-    :param filename: Name of the file to open
-    :type filename: string
-    :return: List of five letter words
-    :rtype: list of strings
-    """
-    with open(filename, encoding="utf-8") as dictionary:
-        wordlist = list(
-            dict.fromkeys(
-                [
-                    i.strip().lower()
-                    for i in dictionary.readlines()
-                    if len(i.strip()) == 5
-                    and i.strip().isalpha()
-                    and i.isascii()
-                    and i.islower()
-                ]
-            )
-        )
-    return wordlist
+    def __init__(self, printy=True, debug=False):
+        self.length = 5
+        self.wordlist = []
+        self.greens = {}
+        self.yellows = {}
+        self.blacks = {}
+        self.counter = Counter([j for i in self.wordlist for j in i])
+        self.game_over = False
+        self.gamelist = self.wordlist
+        self.printy = printy
+        self.guess_count = 0
+        self.finalword = None
+        self.debug = debug
+
+    def add_wordlist(self, filename=None, wordlist=None):
+        if filename:
+            with open(filename, encoding="utf-8") as dictionary:
+                self.wordlist = list(
+                    dict.fromkeys(
+                        [
+                            i.strip().lower()
+                            for i in dictionary.readlines()
+                            if len(i.strip()) == 5
+                            and i.strip().isalpha()
+                            and i.isascii()
+                            and i.islower()
+                        ]
+                    )
+                )
+        if wordlist:
+            self.wordlist = wordlist
+
+    def wordsuggest(self, depth):
+        """
+        Suggests the word with the greatest letter frequency usage
+        from the given list and frequency data
+
+        :param counter: The frequency data of letters in the wordlist
+        :type counter: collections.Counter
+        :param wordlist: The list of words to choose from
+        :type wordlist: list of strings
+        :param depth: The top *depth* most common letters will be considered
+        :type depth: int
+        :return: The best word to guess
+        :rtype: string
+        """
+        letters = self.counter.most_common(depth)
+        newlist = [
+            j for j in self.gamelist if all((k in [i[0] for i in letters] for k in j))
+        ]
+        if newlist:
+            bestword = newlist[0]
+            bestcount = 0
+            for i in newlist:
+                count = sum([self.counter[letter] for letter in dict.fromkeys(i)])
+                if count > bestcount:
+                    bestword = i
+                    bestcount = count
+            if (
+                len(set(bestword)) < len(list(bestword))
+                and len(self.wordlist) > 1
+                and depth < len(self.counter)
+            ):
+                trialword = self.wordsuggest(depth + 1)
+                newcount = sum(
+                    [self.counter[letter] for letter in dict.fromkeys(trialword)]
+                )
+                if newcount > count:
+                    return trialword
+                return bestword
+            return bestword
+        return self.wordsuggest(depth + 1)
+
+    def guess_eval(self, guess, result):
+        """
+        A helper function to move the results of a guess evaluation
+        to the dictionaries of guessed values
+
+        :param guess: The word guessed
+        :type guess: string
+        :param result: The result of the guess
+        :type result: string or list of strings
+        :param greens: The previous known letters with verified existence and placement
+        :type greens: dictionary
+        :param yellows: The previous known letters with verified existence but not placement
+        :type yellows: dictionary
+        :param blacks: The previous known letters with verified non-existence
+        :type blacks: dictionary
+        :return: The three input dictionaries with the new information added
+        :rtype: three dictionaries
+        """
+        for index, i in enumerate(guess):
+            if result[index] == "g":
+                if i in self.greens:
+                    self.greens[i][index] = None
+                else:
+                    self.greens[i] = dict.fromkeys([index])
+            elif result[index] == "y":
+                if i in self.yellows:
+                    self.yellows[i][index] = None
+                else:
+                    self.yellows[i] = dict.fromkeys([index])
+            elif result[index] == "b":
+                if i in self.blacks:
+                    self.blacks[i][index] = None
+                else:
+                    self.blacks[i] = dict.fromkeys([index])
+
+    def gen_new_list(self):
+        """
+        Given a wordlist and the dictionaries containing the results of previous guesses,
+        generates a new wordlist.
+
+        :param wordlist: The previous wordlist
+        :type wordlist: list of strings
+        :param yellows: The previous known letters with verified existence but not placement
+        :type yellows: dictionary
+        :param greens: The previous known letters with verified existence and placement
+        :type greens: dictionary
+        :param blacks: The previous known letters with verified non-existence
+        :type blacks: dictionary
+        :return: The new word list
+        :rtype: list of strings
+        """
+        self.gamelist = [i for i in self.gamelist if self.validate_word(i)]
+
+    def validate_word(self, word):
+        """
+        Checks a word against previous guesses to see if it is still a legal word
+
+        :param yellows: The previous known letters with verified existence but not placement
+        :type yellows: dictionary
+        :param greens: The previous known letters with verified existence and placement
+        :type greens: dictionary
+        :param blacks: The previous known letters with verified non-existence
+        :type blacks: dictionary
+        :param wordlist: The word to evaluate
+        :type wordlist: string
+        :return: whether the word is legal or not
+        :rtype: bool
+        """
+        valid = True
+        for letter, pos in self.blacks.items():
+            if (
+                letter in word
+                and letter not in self.yellows
+                and letter not in self.greens
+            ):
+                return False
+            if letter in word and (letter in self.yellows or letter in self.greens):
+                valid = not any((word[num] is letter for num in pos))
+                if not valid:
+                    return False
+        for letter, pos in self.yellows.items():
+            for num in pos:
+                if word[num] is letter:
+                    return False
+            if letter not in word:
+                return False
+        for letter, pos in self.greens.items():
+            for num in pos:
+                if word[num] is not letter:
+                    return False
+        return valid
+
+    def make_guess(self, startingwords):
+        if type(startingwords) == type([]) and self.guess_count < len(startingwords):
+            self.guess_word = startingwords[self.guess_count]
+        elif type(startingwords) == type("") and self.guess_count == 0:
+            self.guess_word = startingwords
+        else:
+            self.guess_word = self.wordsuggest(5)
+        if self.printy:
+            print(self.guess_word)
+        self.guess_count += 1
+
+    def eval_word(self, evaluator):
+        if evaluator is None:
+            result = collect_input(self.guess_word)
+        else:
+            result = evaluator(self.guess_word, self.finalword)
+        self.guess_eval(self.guess_word, result)
+        self.gen_new_list()
+
+    def update_gamestate(self):
+        if sum([len(i) for i in self.greens.values()]) == 5:
+            self.game_over = True
+        else:
+            self.counter = Counter([j for i in self.wordlist for j in i])
+
+    def play(self, startingwords=None, evaluator=None, finalword=None):
+        """
+        The play function plays the game of Wordle against the human
+        """
+        self.game_over = False
+        self.gamelist = self.wordlist
+        self.counter = Counter([j for i in self.gamelist for j in i])
+        if finalword:
+            self.finalword = finalword
+
+        while not self.game_over:
+            self.make_guess(startingwords)
+            self.eval_word(evaluator)
+            self.update_gamestate()
+
+        return self.guess_count
 
 
 def word_make(char_list, length):
@@ -50,44 +238,6 @@ def word_make(char_list, length):
         subwords = word_make(char_list, length - 1)
         outlist.extend([i + j for j in subwords])
     return outlist
-
-
-def wordsuggest(counter, wordlist, depth):
-    """
-    Suggests the word with the greatest letter frequency usage
-    from the given list and frequency data
-
-    :param counter: The frequency data of letters in the wordlist
-    :type counter: collections.Counter
-    :param wordlist: The list of words to choose from
-    :type wordlist: list of strings
-    :param depth: The top *depth* most common letters will be considered
-    :type depth: int
-    :return: The best word to guess
-    :rtype: string
-    """
-    letters = counter.most_common(depth)
-    newlist = [j for j in wordlist if all((k in [i[0] for i in letters] for k in j))]
-    if newlist:
-        bestword = newlist[0]
-        bestcount = 0
-        for i in newlist:
-            count = sum([counter[letter] for letter in dict.fromkeys(i)])
-            if count > bestcount:
-                bestword = i
-                bestcount = count
-        if (
-            len(set(bestword)) < len(list(bestword))
-            and len(wordlist) > 1
-            and depth < len(counter)
-        ):
-            trialword = wordsuggest(counter, wordlist, depth + 1)
-            newcount = sum([counter[letter] for letter in dict.fromkeys(trialword)])
-            if newcount > count:
-                return trialword
-            return bestword
-        return bestword
-    return wordsuggest(counter, wordlist, depth + 1)
 
 
 def collect_input(guess):
@@ -112,134 +262,14 @@ def collect_input(guess):
     return outlist
 
 
-def guess_eval(guess, result, greens, yellows, blacks):
-    """
-    A helper function to move the results of a guess evaluation
-    to the dictionaries of guessed values
-
-    :param guess: The word guessed
-    :type guess: string
-    :param result: The result of the guess
-    :type result: string or list of strings
-    :param greens: The previous known letters with verified existence and placement
-    :type greens: dictionary
-    :param yellows: The previous known letters with verified existence but not placement
-    :type yellows: dictionary
-    :param blacks: The previous known letters with verified non-existence
-    :type blacks: dictionary
-    :return: The three input dictionaries with the new information added
-    :rtype: three dictionaries
-    """
-    for index, i in enumerate(guess):
-        if result[index] == "g":
-            if i in greens:
-                greens[i][index] = None
-            else:
-                greens[i] = dict.fromkeys([index])
-        elif result[index] == "y":
-            if i in yellows:
-                yellows[i][index] = None
-            else:
-                yellows[i] = dict.fromkeys([index])
-        elif result[index] == "b":
-            if i in blacks:
-                blacks[i][index] = None
-            else:
-                blacks[i] = dict.fromkeys([index])
-    return greens, yellows, blacks
-
-
-def gen_new_list(wordlist, yellows, greens, blacks):
-    """
-    Given a wordlist and the dictionaries containing the results of previous guesses,
-    generates a new wordlist.
-
-    :param wordlist: The previous wordlist
-    :type wordlist: list of strings
-    :param yellows: The previous known letters with verified existence but not placement
-    :type yellows: dictionary
-    :param greens: The previous known letters with verified existence and placement
-    :type greens: dictionary
-    :param blacks: The previous known letters with verified non-existence
-    :type blacks: dictionary
-    :return: The new word list
-    :rtype: list of strings
-    """
-    updatedlist = []
-
-    for i in wordlist:
-        if validate_word(yellows, greens, blacks, i):
-            updatedlist.append(i)
-
-    return updatedlist
-
-
-def validate_word(yellows, greens, blacks, word):
-    """
-    Checks a word against previous guesses to see if it is still a legal word
-
-    :param yellows: The previous known letters with verified existence but not placement
-    :type yellows: dictionary
-    :param greens: The previous known letters with verified existence and placement
-    :type greens: dictionary
-    :param blacks: The previous known letters with verified non-existence
-    :type blacks: dictionary
-    :param wordlist: The word to evaluate
-    :type wordlist: string
-    :return: whether the word is legal or not
-    :rtype: bool
-    """
-    valid = True
-    for letter, pos in blacks.items():
-        if letter in word and letter not in yellows and letter not in greens:
-            return False
-        if letter in word and (letter in yellows or letter in greens):
-            valid = not any((word[num] is letter for num in pos))
-            if not valid:
-                return False
-    for letter, pos in yellows.items():
-        for num in pos:
-            if word[num] is letter:
-                return False
-        if letter not in word:
-            return False
-    for letter, pos in greens.items():
-        for num in pos:
-            if word[num] is not letter:
-                return False
-    return valid
-
-
 def main():
     """
     The main function plays one game of Wordle against the user,
     with the computer making guesses and the user verifying the computer's guesses
     """
-    wordlist = get_wordlist("/usr/share/dict/words")
-
-    my_counter = Counter([j for i in wordlist for j in i])
-
-    guess_word = wordsuggest(my_counter, wordlist, 5)
-    guess_word = "plant"
-    print(guess_word)
-
-    yellows, greens, blacks = {}
-
-    updatedlist = wordlist
-
-    while sum([len(i) for i in greens.values()]) != 5:
-
-        result = collect_input(guess_word)
-        greens, yellows, blacks = guess_eval(
-            guess_word, result, greens, yellows, blacks
-        )
-
-        updatedlist = gen_new_list(updatedlist, yellows, greens, blacks)
-
-        my_counter = Counter([j for i in updatedlist for j in i])
-        if my_counter:
-            guess_word = wordsuggest(my_counter, updatedlist, 5)
-            print(guess_word)
+    my_wordler = Wordler()
+    my_wordler.add_wordlist(filename="/usr/share/dict/words")
+    my_wordler.play(evaluator=1)
 
 
 if __name__ == "__main__":
