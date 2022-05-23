@@ -109,7 +109,7 @@ def test_wordguess(finalword, startingword=None, debug=True, wordlist=None):
         guess_word = startingword
     prev_guesses = []
     guess_count = 0
-    yellows, blacks, greens = {}
+    yellows, blacks, greens = {}, {}, {}
 
     updatedlist = wordlist
 
@@ -235,14 +235,14 @@ def main():
     # test_wordguess("undue")
     # test_wordguess("drool")
     # test_wordguess("palls")
-    # check_starting_word("trunk")
-    # check_starting_word("loses")
-    # check_starting_word("psalm")
+    check_starting_word("trunk")
+    check_starting_word("loses")
+    check_starting_word("psalm")
     # check_starting_word("abaci")
     # check_starting_word("derby")
     # check_starting_word("duchy")
     # check_starting_word("hertz")
-    find_best_starting_word()
+    # find_best_starting_word()
 
 
 if __name__ == "__main__":
