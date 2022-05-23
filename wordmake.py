@@ -223,7 +223,7 @@ def main():
     guess_word = "plant"
     print(guess_word)
 
-    yellows, greens, blacks = {}
+    yellows, greens, blacks = {}, {}, {}
 
     updatedlist = wordlist
 
