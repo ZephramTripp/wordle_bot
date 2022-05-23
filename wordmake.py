@@ -199,7 +199,7 @@ class Wordler:
         if sum([len(i) for i in self.greens.values()]) == 5:
             self.game_over = True
         else:
-            self.counter = Counter([j for i in self.wordlist for j in i])
+            self.counter = Counter([j for i in self.gamelist for j in i])
 
     def play(self, startingwords=None, evaluator=None, finalword=None):
         """
@@ -269,7 +269,7 @@ def main():
     """
     my_wordler = Wordler()
     my_wordler.add_wordlist(filename="/usr/share/dict/words")
-    my_wordler.play(evaluator=1)
+    my_wordler.play(startingwords="plant")
 
 
 if __name__ == "__main__":
