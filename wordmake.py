@@ -7,6 +7,10 @@ from collections import Counter
 from collections import namedtuple
 
 
+class NoWordsLeftException(Exception):
+    pass
+
+
 class Wordler:
     """
     The Wordler class encapsulates the solver half of the Wordlebot code
@@ -74,6 +78,8 @@ class Wordler:
             for j in self.game_attrs["game_list"]
             if all((k in [i[0] for i in letters] for k in j))
         ]
+        if depth > len(self.counter):
+            raise NoWordsLeftException
         if newlist:
             bestword = newlist[0]
             bestcount = 0
@@ -205,10 +211,15 @@ class Wordler:
         elif isinstance(startingwords, str) and self.game_attrs["guess_count"] == 0:
             self.guess_word = startingwords
         else:
-            self.guess_word = self.wordsuggest(5)
+            try:
+                self.guess_word = self.wordsuggest(5)
+            except NoWordsLeftException:
+                print("There are no words left!")
+                raise NoWordsLeftException
         if self.verbosity:
             print(self.guess_word)
         self.game_attrs["guess_count"] += 1
+        return self.guess_word
 
     def eval_word(self, evaluator):
         """
@@ -298,7 +309,7 @@ def main():
     """
     my_wordler = Wordler()
     my_wordler.add_wordlist(filename="/usr/share/dict/words")
-    my_wordler.play(startingwords=["clamp", "berth"])
+    my_wordler.play(startingwords=None)
 
 
 if __name__ == "__main__":
