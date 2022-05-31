@@ -8,7 +8,7 @@ from collections import namedtuple
 
 
 class NoWordsLeftException(Exception):
-    pass
+    """Exception for when all words have been eliminated (usually by accident)"""
 
 
 class Wordler:
@@ -30,6 +30,18 @@ class Wordler:
         }
         self.verbosity = verbosity
         self.guess_word = ""
+
+    def reset(self):
+        """
+        This resets the game, but maintains any wordlists
+        """
+        if self.wordlist:
+            self.counter = Counter([j for i in self.wordlist for j in i])
+            self.game_attrs["game_list"] = self.wordlist
+        checked_letters = namedtuple("checked_letters", ["greens", "yellows", "blacks"])
+        self.checked_letters = checked_letters({}, {}, {})
+        self.game_attrs["game_over"] = False
+        self.game_attrs["guess_count"] = 0
 
     def add_wordlist(self, filename=None, wordlist=None):
         """
@@ -78,7 +90,7 @@ class Wordler:
             for j in self.game_attrs["game_list"]
             if all((k in [i[0] for i in letters] for k in j))
         ]
-        if depth > len(self.counter):
+        if depth > (len(self.counter) + 5):
             raise NoWordsLeftException
         if newlist:
             bestword = newlist[0]
@@ -213,9 +225,9 @@ class Wordler:
         else:
             try:
                 self.guess_word = self.wordsuggest(5)
-            except NoWordsLeftException:
+            except NoWordsLeftException as no_words_left:
                 print("There are no words left!")
-                raise NoWordsLeftException
+                raise NoWordsLeftException from no_words_left
         if self.verbosity:
             print(self.guess_word)
         self.game_attrs["guess_count"] += 1
