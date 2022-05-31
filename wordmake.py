@@ -212,7 +212,7 @@ class Wordler:
                     return False
         return valid
 
-    def make_guess(self, startingwords):
+    def make_guess(self, startingwords=None):
         """
         Makes another guess
         """
