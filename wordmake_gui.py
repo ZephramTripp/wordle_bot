@@ -83,7 +83,7 @@ def makeguess_gui():
         if my_wordler.game_attrs["game_over"]:
             return None
     try:
-        guess_word = my_wordler.make_guess()
+        guess_word = my_wordler.make_guess(startingwords=["clamp", "berth"])
         for index, i in enumerate(guess_word):
             letter_id = canvas.create_text(
                 93 + index * 55,
