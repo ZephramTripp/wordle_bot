@@ -96,7 +96,7 @@ class Wordler:
             bestword = newlist[0]
             bestcount = 0
             for i in newlist:
-                count = sum([self.counter[letter] for letter in dict.fromkeys(i)])
+                count = sum(self.counter[letter] for letter in dict.fromkeys(i))
                 if count > bestcount:
                     bestword = i
                     bestcount = count
@@ -107,7 +107,7 @@ class Wordler:
             ):
                 trialword = self.wordsuggest(depth + 1)
                 newcount = sum(
-                    [self.counter[letter] for letter in dict.fromkeys(trialword)]
+                    self.counter[letter] for letter in dict.fromkeys(trialword)
                 )
                 if newcount > count:
                     return trialword
@@ -248,7 +248,7 @@ class Wordler:
         """
         Checks to see if the game is over
         """
-        if sum([len(i) for i in self.checked_letters.greens.values()]) == self.length:
+        if sum(len(i) for i in self.checked_letters.greens.values()) == self.length:
             self.game_attrs["game_over"] = True
         else:
             self.counter = Counter([j for i in self.game_attrs["game_list"] for j in i])
